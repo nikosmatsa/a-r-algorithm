@@ -1,0 +1,229 @@
+---
+title: "Acceptance-Rejection Algorithm for Beta(2,2) with Uniform Envelope"
+author: "Nikos Matsavelas"
+date: "4/16/2020"
+output: html_document
+---
+
+## Grid of Points 
+
+```{r}
+
+x = seq(0,10,0.001)
+n = 10000
+
+```
+
+## Target density
+
+Target density is Beta distribution: 
+$$ f(x) =  \frac{\Gamma(a+b)}{\Gamma(a)\Gamma(b)   } x^{a-1}(1-x)^{b-1}$$
+
+with parameters $a,b = 2$
+
+```{r}
+
+a=2
+b=2
+f = dbeta(x,shape1 = a,shape2 = b)
+```
+
+## Candidate density
+
+Our candidate density is Uniform 
+$$g(x) = \frac{1}{max-min}$$
+with parameters: $\max=1,\min=0$
+
+```{r}
+g = dunif(x,0,1) 
+```
+
+## Calculate M constant
+
+We calculate the maximum value of beta(2,2) in the $g(x)$ interval $(0,1)$
+
+```{r}
+M = optimize(f=function(x){dbeta(x,2,2)},
+           interval=c(0,1),maximum=TRUE)$objective
+M
+```
+
+## Acceptance Probability
+
+$$\mathbb{P}_{acceptance} = \frac{1}{M} \approx 0.66$$
+
+```{r}
+1/M
+```
+
+
+## A-R Alogithm
+
+We generate $Y \sim g, U \sim U[0,M]$ 
+and then we accept $X=Y$ if $U \leq \frac{f(Y) }{M \cdot g(Y)}$
+
+
+```{r}
+set.seed(12345)
+u=runif(n,max=M) 
+y=runif(n)       
+x=y[u<dbeta(y,a,b)] 
+
+```
+
+## Histogram of accepted values 
+
+We observe it is symmetric around 1/2
+
+```{r}
+
+hist(x,prob=TRUE,breaks = 30)
+curve(dbeta(x,2,2),add = TRUE)
+
+```
+
+
+
+## Comparison of Mean & Standard Error
+
+The theoretical mean of Beta distribution is: 
+$$\mathbb{E}[X] = \frac{a}{a+b} \Rightarrow \mathbb{E}[X] = \frac{2}{4}=\frac{1}{2} $$
+
+
+The theoratical standard error : 
+
+$$\mathbb{S} = \sqrt{ \frac{ab}{((a+b)^2)(a+b+1)}   }\approx 0.22$$
+
+```{r}
+mu = a/(a+b) 
+mu
+v = (a*b)/(  ((a+b)^2)  *(a+b+1))
+sqrt(v)
+
+```
+
+The accepted mean of values is $\mathbb{E}_{x^{\star}} \approx 0.50$ and
+the sampled standard error is $\mathbb{S}_{x^{\star}} \approx 0.22$ hence are both close-identical to the theoretical mean & sd.
+
+```{r}
+hhat=mean(x);hhat
+sderror=sd(x);sderror
+```
+
+
+## Actual Probability of Acceptance 
+
+$$\mathbb{P}^{\star}_{acceptance} \approx 0.66$$
+
+```{r}
+
+x = sapply(y,function(y) u<dbeta(y,a,b))
+mean(x==TRUE)
+
+```
+
+## Probability of Rejection 
+$$1 - \mathbb{P}^{\star}_{acceptance} =  \mathbb{P}^{\star}_{rejection} \approx 0.33$$
+
+```{r}
+mean(x==FALSE)
+```
+
+
+
+
+
+## Alternative  
+
+```{r}
+set.seed(12345)
+X = 0
+AR = rep(NA, n)
+  
+while (X < n) {
+    u = runif(1,0,1)
+    y = runif(1)
+    if (u < dbeta(y,2,2)/(M*dunif(y,0,1))) { 
+      X = X+1
+      AR[X] = y
+    }
+  }
+```
+
+
+
+
+
+
+
+
+```{r}
+mean(AR)
+sd(AR)
+```
+
+
+```{r}
+hist(AR,prob=TRUE,breaks = 30)
+curve(dbeta(x,2,2),add = TRUE)
+```
+
+
+
+## Additional calculations 
+
+In order to calculate the actual probability of acceptance in the while loop format the output of the previous calculations is mot useful, since it contains only the accepted values.To find the probability of acceptance we have to count the accepted values and the rejected values inside the body of the previous while loop.Therefore we must have:
+
+```{r}
+
+a=2
+b=2
+n=10000
+M=1.5
+X = 0
+AR = rep(NA,n)
+
+iterations = 0
+accept     = 0
+while (X < n) {
+  iterations =  iterations + 1
+  u = runif(1,0,1)
+  y = runif(1)
+  if (u < dbeta(y,2,2)/(M*dunif(y,0,1))) { 
+    accept = accept + 1
+    X = X+1
+    AR[X] = y
+  }
+}
+accept
+```
+
+## Total number of iterations executed in the while loop 
+
+```{r}
+iterations 
+```
+
+
+## The actual probability of Acceptance 
+
+Consequently the $P_{acceptance}^{\star} \approx 0.66$ close to the theoretical probability
+
+```{r}
+accept/iterations 
+```
+
+
+
+
+## The actual probability of Rejection
+
+$P_{rejection}^{\star} \approx 0.33$
+
+```{r}
+reject = iterations - accept
+reject/iterations 
+```
+
+
+
